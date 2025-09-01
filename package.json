@@ -1,0 +1,28 @@
+{
+  "name": "eucon-reg",
+  "version": "1.0.0",
+  "description": "THETA EuroCon NFT Registration System",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k \"npm --workspace=packages/backend run dev\" \"npm --workspace=packages/frontend run dev\"",
+    "build": "npm run build --workspaces",
+    "start": "npm --workspace=packages/backend run start & npm --workspace=packages/frontend run start",
+    "lint": "npm run lint --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "clean": "rm -rf packages/*/dist packages/*/node_modules node_modules"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@reown/appkit": "^1.8.1",
+    "@reown/appkit-adapter-ethers": "^1.8.1",
+    "@tanstack/react-query": "^5.85.6"
+  }
+}
