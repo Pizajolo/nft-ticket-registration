@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { requireUserAuth } from '../middlewares/auth';
 import { ValidationError } from '../middlewares/errors';
 import { getTNT721Contracts } from '../env';
+import { getDatabase } from '../db/init';
+import { ethers } from 'ethers';
 
 const router = Router();
 
@@ -16,35 +18,69 @@ router.post('/of', requireUserAuth, async (req: Request, res: Response) => {
   try {
     const { wallet } = walletSchema.parse(req.body);
     const sessionWallet = req.user!.wallet;
-    
-    // If wallet is provided, it must match session wallet
+
     if (wallet && wallet.toLowerCase() !== sessionWallet.toLowerCase()) {
       throw new ValidationError('Wallet address must match session wallet');
     }
-    
-    const targetWallet = wallet || sessionWallet;
+
+    const owner = (wallet || sessionWallet) as `0x${string}`;
     const contracts = getTNT721Contracts();
-    
-    // TODO: Implement actual NFT retrieval from blockchain
-    // For now, return mock data
-    const mockNfts = [
-      {
-        contract: contracts[0],
-        tokenId: '1',
-        owner: targetWallet
-      },
-      {
-        contract: contracts[0],
-        tokenId: '2',
-        owner: targetWallet
-      }
+
+    const rpcUrl = process.env['THETA_RPC_URL'] || 'https://eth-rpc-api.thetatoken.org/rpc';
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+
+    const ERC721_ENUM_ABI = [
+      'function balanceOf(address owner) view returns (uint256)',
+      'function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)',
+      'function name() view returns (string)'
     ];
-    
+
+    const results: Array<{ contract: `0x${string}`; tokenId: string; owner: `0x${string}`; name?: string; existing?: { firstName: string; lastName: string; email: string } }> = [];
+    const nameCache: Record<string, string> = {};
+
+    for (const addr of contracts) {
+      try {
+        const contract = new ethers.Contract(addr, ERC721_ENUM_ABI, provider);
+        // Read name once per contract
+        if (!nameCache[addr]) {
+          try {
+            const n: string = await (contract as any)['name']();
+            nameCache[addr] = n;
+          } catch {
+            nameCache[addr] = '';
+          }
+        }
+        const bal: bigint = await (contract as any)['balanceOf'](owner);
+        const count = Number(bal);
+        for (let i = 0; i < count; i++) {
+          try {
+            const tokenIdBn: bigint = await (contract as any)['tokenOfOwnerByIndex'](owner, i);
+            results.push({ contract: addr as `0x${string}`, tokenId: tokenIdBn.toString(), owner, name: nameCache[addr] });
+          } catch {}
+        }
+      } catch {}
+    }
+
+    // Attach existing registration data when NFT still owned by same wallet
+    const db = getDatabase();
+    const byKey: Record<string, { firstName: string; lastName: string; email: string }> = {};
+    for (const r of db.registrations) {
+      if (r.wallet.toLowerCase() !== owner.toLowerCase()) continue;
+      const k = `${r.nft.contract.toLowerCase()}:${r.nft.tokenId}`;
+      byKey[k] = { firstName: r.firstName, lastName: r.lastName, email: r.email };
+    }
+    for (const item of results) {
+      const k = `${item.contract.toLowerCase()}:${item.tokenId}`;
+      if (byKey[k]) {
+        item.existing = byKey[k];
+      }
+    }
+
     res.json({
       success: true,
       data: {
-        nfts: mockNfts,
-        total: mockNfts.length
+        nfts: results,
+        total: results.length
       }
     });
   } catch (error) {
