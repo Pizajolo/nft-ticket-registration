@@ -11,6 +11,7 @@ import { env } from '../env';
 import { sessionService } from '../services/sessionService';
 import { getDatabase, saveDatabase } from '../db/init';
 import { ContractService } from '../services/contractService';
+import { ActivityService } from '../services/activityService';
 
 const router = Router();
 
@@ -76,6 +77,9 @@ router.post('/login/password', authRateLimiter, async (req: Request, res: Respon
     
     // Set session cookie
     setSessionCookie(res, jwt, env.SESSION_TTL_SECONDS, env.SESSION_COOKIE_NAME);
+    
+    // Log admin login
+    await ActivityService.logAdminLogin(admin.wallet);
     
     res.json({
       success: true,
@@ -148,6 +152,9 @@ router.post('/login/wallet/siwe', authRateLimiter, async (req: Request, res: Res
     // Set session cookie
     setSessionCookie(res, jwt, env.SESSION_TTL_SECONDS, env.SESSION_COOKIE_NAME);
     
+    // Log admin login
+    await ActivityService.logAdminLogin(wallet as `0x${string}`);
+    
     res.json({
       success: true,
       data: {
@@ -168,6 +175,9 @@ router.post('/login/wallet/siwe', authRateLimiter, async (req: Request, res: Res
 
 // Admin logout
 router.post('/logout', requireAdminAuth, async (req: Request, res: Response) => {
+  // Log admin logout
+  await ActivityService.logAdminLogout(req.user!.wallet);
+  
   // Invalidate session in database
   sessionService.invalidateSession(req.user!.sessionId);
   
@@ -255,11 +265,34 @@ router.patch('/registrations/:id', requireAdminAuth, async (req: Request, res: R
       throw new ValidationError('Registration not found');
     }
     
+    // Store original values for activity logging
+    const originalValues = { ...registration };
+    
     // Apply updates
     Object.assign(registration, updates);
     
     // Save to database
     await saveDatabase();
+    
+    // Log activity
+    const changes: Record<string, any> = {};
+    Object.keys(updates).forEach(key => {
+      if (originalValues[key as keyof typeof originalValues] !== updates[key as keyof typeof updates]) {
+        changes[key] = {
+          from: originalValues[key as keyof typeof originalValues],
+          to: updates[key as keyof typeof updates]
+        };
+      }
+    });
+    
+    if (Object.keys(changes).length > 0) {
+      await ActivityService.logRegistrationUpdated(
+        req.user!.wallet,
+        registration.wallet,
+        `${registration.firstName} ${registration.lastName}`,
+        changes
+      );
+    }
     
     // Enhance response with contract name
     const contractInfo = db.contracts[registration.nft.contract.toLowerCase()];
@@ -332,6 +365,18 @@ router.post('/registrations', requireAdminAuth, async (req: Request, res: Respon
     db.registrations.push(...registrations);
     await saveDatabase();
     
+    // Log activities for each registration
+    for (const registration of registrations) {
+      await ActivityService.logRegistrationCreated(
+        req.user!.wallet,
+        registration.wallet,
+        `${registration.firstName} ${registration.lastName}`,
+        registration.nft.contract,
+        registration.nft.tokenId,
+        registration.ticketId
+      );
+    }
+    
     res.json({
       success: true,
       data: {
@@ -367,9 +412,21 @@ router.delete('/registrations/:id', requireAdminAuth, async (req: Request, res: 
       throw new ValidationError('Registration not found');
     }
     
+    // Store registration details for activity logging
+    const registration = db.registrations[registrationIndex];
+    
     // Remove registration
     db.registrations.splice(registrationIndex, 1);
     await saveDatabase();
+    
+    // Log activity
+    await ActivityService.logRegistrationDeleted(
+      req.user!.wallet,
+      registration.wallet,
+      `${registration.firstName} ${registration.lastName}`,
+      registration.nft.contract,
+      registration.nft.tokenId
+    );
     
     res.json({
       success: true,
@@ -459,6 +516,23 @@ router.get('/stats', requireAdminAuth, async (req: Request, res: Response) => {
         checkedInTickets: checkedInCount,
         pendingTickets: pendingCount
       }
+    });
+  } catch (error) {
+    throw error;
+  }
+});
+
+// Get recent activities for admin dashboard
+router.get('/activities', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { limit = 10 } = req.query;
+    const limitNum = parseInt(limit.toString());
+    
+    const activities = ActivityService.getRecentActivities(limitNum);
+    
+    res.json({
+      success: true,
+      data: { activities }
     });
   } catch (error) {
     throw error;

@@ -17,6 +17,7 @@ interface Database {
       fetchedAt: string;
     };
   };
+  activities: any[];
   meta: {
     createdAt: string;
     version: string;
@@ -36,6 +37,7 @@ const defaultData: Database = {
     }
   ],
   contracts: {},
+  activities: [],
   meta: {
     createdAt: new Date().toISOString(),
     version: '1.0.0'
@@ -90,7 +92,7 @@ export const initializeDatabase = async (): Promise<void> => {
 const validateDatabaseStructure = (): void => {
   if (!db) return;
 
-  const requiredKeys: (keyof Database)[] = ['sessions', 'registrations', 'challenges', 'admins', 'contracts', 'meta'];
+  const requiredKeys: (keyof Database)[] = ['sessions', 'registrations', 'challenges', 'admins', 'contracts', 'activities', 'meta'];
   
   for (const key of requiredKeys) {
     if (!(key in db)) {
@@ -100,6 +102,7 @@ const validateDatabaseStructure = (): void => {
       if (key === 'challenges') db.challenges = [];
       if (key === 'admins') db.admins = defaultData.admins;
       if (key === 'contracts') db.contracts = {};
+      if (key === 'activities') db.activities = [];
       if (key === 'meta') db.meta = defaultData.meta;
     }
   }

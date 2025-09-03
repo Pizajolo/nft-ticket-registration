@@ -2,6 +2,7 @@
 
 import { AdminStats } from '@/app/admin/page';
 import Link from 'next/link';
+import { RecentActivities } from './RecentActivities';
 
 interface AdminDashboardProps {
   stats: AdminStats | null;
@@ -250,15 +251,15 @@ export function AdminDashboard({ stats }: AdminDashboardProps) {
       {/* Recent Activity */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Recent Activity
-          </h3>
-          <div className="text-center py-8 text-gray-500">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            <p className="mt-2 text-sm">Activity feed coming soon</p>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              Recent Activity
+            </h3>
+            <div className="text-sm text-gray-500">
+              Last 10 activities
+            </div>
           </div>
+          <RecentActivities limit={10} />
         </div>
       </div>
     </div>

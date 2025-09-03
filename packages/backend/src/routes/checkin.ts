@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdminAuth } from '../middlewares/auth';
 import { ValidationError, NotFoundError } from '../middlewares/errors';
 import { getDatabase, saveDatabase } from '../db/init';
+import { ActivityService } from '../services/activityService';
 
 const router = Router();
 
@@ -52,6 +53,14 @@ router.post('/:ticketId', requireAdminAuth, async (req: Request, res: Response) 
     
     // Save to database
     await saveDatabase();
+    
+    // Log check-in activity
+    await ActivityService.logCheckIn(
+      req.user!.wallet,
+      registration.wallet,
+      `${registration.firstName} ${registration.lastName}`,
+      registration.ticketId
+    );
     
     res.json({
       success: true,
@@ -156,6 +165,14 @@ router.post('/:ticketId/checkout', requireAdminAuth, async (req: Request, res: R
     
     // Save to database
     await saveDatabase();
+    
+    // Log check-out activity
+    await ActivityService.logCheckOut(
+      req.user!.wallet,
+      registration.wallet,
+      `${registration.firstName} ${registration.lastName}`,
+      registration.ticketId
+    );
     
     res.json({
       success: true,

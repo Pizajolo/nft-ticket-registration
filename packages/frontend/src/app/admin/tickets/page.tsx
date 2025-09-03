@@ -69,7 +69,7 @@ export default function AdminTicketsPage() {
             <div className="flex items-center space-x-4">
               <Link
                 href="/admin"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
+                className="hidden sm:block text-gray-600 hover:text-gray-900 transition-colors"
               >
                 Dashboard
               </Link>
