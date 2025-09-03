@@ -5,6 +5,7 @@ import { ValidationError } from '../middlewares/errors';
 import { getTNT721Contracts } from '../env';
 import { getDatabase } from '../db/init';
 import { ethers } from 'ethers';
+import { ContractService } from '../services/contractService';
 
 const router = Router();
 
@@ -36,26 +37,25 @@ router.post('/of', requireUserAuth, async (req: Request, res: Response) => {
     ];
 
     const results: Array<{ contract: `0x${string}`; tokenId: string; owner: `0x${string}`; name?: string; existing?: { firstName: string; lastName: string; email: string } }> = [];
-    const nameCache: Record<string, string> = {};
 
     for (const addr of contracts) {
       try {
         const contract = new ethers.Contract(addr, ERC721_ENUM_ABI, provider);
-        // Read name once per contract
-        if (!nameCache[addr]) {
-          try {
-            const n: string = await (contract as any)['name']();
-            nameCache[addr] = n;
-          } catch {
-            nameCache[addr] = '';
-          }
-        }
+        
+        // Get contract name using the ContractService (will cache it)
+        const contractInfo = await ContractService.getContractInfo(addr);
+        
         const bal: bigint = await (contract as any)['balanceOf'](owner);
         const count = Number(bal);
         for (let i = 0; i < count; i++) {
           try {
             const tokenIdBn: bigint = await (contract as any)['tokenOfOwnerByIndex'](owner, i);
-            results.push({ contract: addr as `0x${string}`, tokenId: tokenIdBn.toString(), owner, name: nameCache[addr] });
+            results.push({ 
+              contract: addr as `0x${string}`, 
+              tokenId: tokenIdBn.toString(), 
+              owner, 
+              name: contractInfo.name 
+            });
           } catch {}
         }
       } catch {}

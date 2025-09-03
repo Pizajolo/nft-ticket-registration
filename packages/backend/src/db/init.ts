@@ -10,6 +10,13 @@ interface Database {
   registrations: any[];
   challenges: any[];
   admins: AdminUser[];
+  contracts: {
+    [address: string]: {
+      name: string;
+      symbol?: string;
+      fetchedAt: string;
+    };
+  };
   meta: {
     createdAt: string;
     version: string;
@@ -28,6 +35,7 @@ const defaultData: Database = {
       wallet: env.ADMIN_WALLET as `0x${string}`
     }
   ],
+  contracts: {},
   meta: {
     createdAt: new Date().toISOString(),
     version: '1.0.0'
@@ -82,7 +90,7 @@ export const initializeDatabase = async (): Promise<void> => {
 const validateDatabaseStructure = (): void => {
   if (!db) return;
 
-  const requiredKeys: (keyof Database)[] = ['sessions', 'registrations', 'challenges', 'admins', 'meta'];
+  const requiredKeys: (keyof Database)[] = ['sessions', 'registrations', 'challenges', 'admins', 'contracts', 'meta'];
   
   for (const key of requiredKeys) {
     if (!(key in db)) {
@@ -91,6 +99,7 @@ const validateDatabaseStructure = (): void => {
       if (key === 'registrations') db.registrations = [];
       if (key === 'challenges') db.challenges = [];
       if (key === 'admins') db.admins = defaultData.admins;
+      if (key === 'contracts') db.contracts = {};
       if (key === 'meta') db.meta = defaultData.meta;
     }
   }

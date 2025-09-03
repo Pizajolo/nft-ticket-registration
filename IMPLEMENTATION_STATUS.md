@@ -55,7 +55,7 @@
     - [x] Renamed "Reown Wallet" to "Wallet Connect"
   - [x] Registration forms
 - [x] Ticket display and QR generation
-- [ ] Admin portal interface
+- [x] Admin portal interface
 - [ ] QR scanner integration
 
 ### 6. Blockchain Integration (T5)

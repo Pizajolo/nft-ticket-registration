@@ -115,4 +115,69 @@ router.get('/:ticketId', requireAdminAuth, async (req: Request, res: Response) =
   }
 });
 
+// Check out ticket (admin only)
+router.post('/:ticketId/checkout', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { ticketId } = ticketIdSchema.parse(req.params);
+    
+    const db = getDatabase();
+    
+    // Find registration by ticket ID
+    const registration = db.registrations.find(
+      (reg: any) => reg.ticketId === ticketId
+    );
+    
+    if (!registration) {
+      throw new NotFoundError('Ticket not found');
+    }
+    
+    // Check if already checked out
+    if (!registration.checkedInAt) {
+      res.json({
+        success: true,
+        data: {
+          message: 'Ticket not checked in',
+          registration: {
+            id: registration.id,
+            ticketId: registration.ticketId,
+            firstName: registration.firstName,
+            lastName: registration.lastName,
+            email: registration.email,
+            checkedInAt: registration.checkedInAt,
+            nft: registration.nft
+          }
+        }
+      });
+      return;
+    }
+    
+    // Mark as checked out
+    delete registration.checkedInAt;
+    
+    // Save to database
+    await saveDatabase();
+    
+    res.json({
+      success: true,
+      data: {
+        message: 'Ticket checked out successfully',
+        registration: {
+          id: registration.id,
+          ticketId: registration.ticketId,
+          firstName: registration.firstName,
+          lastName: registration.lastName,
+          email: registration.email,
+          checkedInAt: registration.checkedInAt,
+          nft: registration.nft
+        }
+      }
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new ValidationError('Invalid ticket ID');
+    }
+    throw error;
+  }
+});
+
 export default router;
