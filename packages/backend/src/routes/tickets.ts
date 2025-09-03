@@ -18,11 +18,11 @@ router.get('/', requireUserAuth, async (req: Request, res: Response) => {
     const db = getDatabase();
     
     // Find registrations for this user
-    const userRegistrations = db.data.registrations.filter(
-      reg => reg.wallet.toLowerCase() === sessionWallet.toLowerCase()
+    const userRegistrations = db.registrations.filter(
+      (reg: any) => reg.wallet.toLowerCase() === sessionWallet.toLowerCase()
     );
     
-    const tickets = userRegistrations.map(reg => ({
+    const tickets = userRegistrations.map((reg: any) => ({
       id: reg.ticketId,
       registrationId: reg.id,
       nft: reg.nft,
@@ -56,8 +56,8 @@ router.get('/:ticketId', requireAuth, async (req: Request, res: Response) => {
     const db = getDatabase();
     
     // Find registration by ticket ID
-    const registration = db.data.registrations.find(
-      reg => reg.ticketId === ticketId
+    const registration = db.registrations.find(
+      (reg: any) => reg.ticketId === ticketId
     );
     
     if (!registration) {

@@ -19,8 +19,8 @@ router.post('/:ticketId', requireAdminAuth, async (req: Request, res: Response) 
     const db = getDatabase();
     
     // Find registration by ticket ID
-    const registration = db.data.registrations.find(
-      reg => reg.ticketId === ticketId
+    const registration = db.registrations.find(
+      (reg: any) => reg.ticketId === ticketId
     );
     
     if (!registration) {
@@ -84,8 +84,8 @@ router.get('/:ticketId', requireAdminAuth, async (req: Request, res: Response) =
     const db = getDatabase();
     
     // Find registration by ticket ID
-    const registration = db.data.registrations.find(
-      reg => reg.ticketId === ticketId
+    const registration = db.registrations.find(
+      (reg: any) => reg.ticketId === ticketId
     );
     
     if (!registration) {

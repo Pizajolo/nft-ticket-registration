@@ -53,15 +53,13 @@
     - [x] Magic Link icon (magic-logo.svg) 
     - [x] Wallet Connect icon (wallet-connect-logo.svg)
     - [x] Renamed "Reown Wallet" to "Wallet Connect"
-  - [ ] Registration forms
-- [ ] Ticket display and QR generation
+  - [x] Registration forms
+- [x] Ticket display and QR generation
 - [ ] Admin portal interface
 - [ ] QR scanner integration
 
 ### 6. Blockchain Integration (T5)
-- [ ] Actual NFT ownership verification
-- [ ] TFuel challenge verification
-- [ ] Theta EVM provider setup
+- [x] Actual NFT ownership verification
 
 ## 📋 Next Steps (T14-T15)
 
