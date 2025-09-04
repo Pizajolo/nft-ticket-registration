@@ -20,7 +20,7 @@ declare global {
  * Middleware to require authentication
  * Sets req.user with wallet and session type
  */
-export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+export const requireAuth = (req: Request, _res: Response, next: NextFunction) => {
   try {
     const token = req.cookies[env.SESSION_COOKIE_NAME];
     
@@ -86,7 +86,7 @@ export const requireAdminAuth = (req: Request, res: Response, next: NextFunction
 /**
  * Middleware to optionally authenticate (sets req.user if valid token exists)
  */
-export const optionalAuth = (req: Request, res: Response, next: NextFunction) => {
+export const optionalAuth = (req: Request, _res: Response, next: NextFunction) => {
   try {
     const token = req.cookies[env.SESSION_COOKIE_NAME];
     

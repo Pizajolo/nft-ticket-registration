@@ -61,7 +61,7 @@ export const errorHandler = (
   error: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   console.error('Error:', {
     message: error.message,
@@ -115,10 +115,10 @@ export const errorHandler = (
   const response: ApiResponse = {
     success: false,
     error: 'Internal server error',
-    message: process.env.NODE_ENV === 'production' 
+    message: process.env['NODE_ENV'] === 'production' 
       ? 'Something went wrong' 
       : error.message
   };
 
-  res.status(500).json(response);
+  return res.status(500).json(response);
 };

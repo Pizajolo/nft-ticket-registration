@@ -4,7 +4,7 @@ import cookieParser from 'cookie-parser';
 import { env, getCorsOrigins } from './env';
 import { errorHandler } from './middlewares/errors';
 import { rateLimiter } from './middlewares/rateLimit';
-import { csrfProtection } from './middlewares/csrf';
+// import { csrfProtection } from './middlewares/csrf';
 
 // Import routes
 import sessionRoutes from './routes/session';
@@ -38,7 +38,7 @@ app.use(cors({
 app.use(rateLimiter);
 
 // Health check endpoint
-app.get('/healthz', (req, res) => {
+app.get('/healthz', (_req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
@@ -56,7 +56,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/checkin', checkinRoutes);
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use('*', (_req, res) => {
   res.status(404).json({ 
     success: false, 
     error: 'Route not found' 

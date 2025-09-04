@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { AddRegistrationModal } from './AddRegistrationModal';
 import { EditRegistrationModal } from './EditRegistrationModal';
 import { TicketDetailsModal } from './TicketDetailsModal';
+import { QRScannerModal } from './QRScannerModal';
+import { ScannedTicketModal } from './ScannedTicketModal';
 
 interface Registration {
   id: string;
@@ -11,6 +13,7 @@ interface Registration {
   nft: {
     contract: string;
     tokenId: string;
+    contractName?: string;
   };
   firstName: string;
   lastName: string;
@@ -20,6 +23,17 @@ interface Registration {
   ticketId: string;
   checkedInAt?: string;
   notes?: string;
+  verification?: {
+    isStillOwned: boolean;
+    currentOwner: string;
+    differences: Array<{
+      type: string;
+      field: string;
+      oldValue: string;
+      newValue: string;
+      message: string;
+    }>;
+  };
 }
 
 export function TicketManagement() {
@@ -42,6 +56,11 @@ export function TicketManagement() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
+  
+  // QR Scanner modal state
+  const [showQRScannerModal, setShowQRScannerModal] = useState(false);
+  const [showScannedTicketModal, setShowScannedTicketModal] = useState(false);
+  const [scannedRegistration, setScannedRegistration] = useState<Registration | null>(null);
 
   useEffect(() => {
     fetchRegistrations();
@@ -106,50 +125,31 @@ export function TicketManagement() {
         throw new Error('Registration not found');
       }
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/checkin/${registration.ticketId}`,
-        {
-          method: 'POST',
-          credentials: 'include',
-        }
-      );
+      // Determine if this is a check-in or check-out
+      const isCheckOut = registration.checkedInAt;
+      const endpoint = isCheckOut 
+        ? `${process.env.NEXT_PUBLIC_API_URL}/api/checkin/${registration.ticketId}/checkout`
+        : `${process.env.NEXT_PUBLIC_API_URL}/api/checkin/${registration.ticketId}`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        credentials: 'include',
+      });
 
       if (response.ok) {
         // Refresh registrations
         fetchRegistrations();
       } else {
-        throw new Error('Check-in failed');
+        throw new Error(isCheckOut ? 'Check-out failed' : 'Check-in failed');
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Check-in failed');
+      setError(error instanceof Error ? error.message : 'Operation failed');
     }
   };
 
   const handleCheckOut = async (registrationId: string) => {
-    try {
-      // Find the registration to get the ticketId
-      const registration = registrations.find(reg => reg.id === registrationId);
-      if (!registration) {
-        throw new Error('Registration not found');
-      }
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/checkin/${registration.ticketId}/checkout`,
-        {
-          method: 'POST',
-          credentials: 'include',
-        }
-      );
-
-      if (response.ok) {
-        // Refresh registrations
-        fetchRegistrations();
-      } else {
-        throw new Error('Check-out failed');
-      }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Check-out failed');
-    }
+    // This function is now handled by handleCheckIn which determines check-in vs check-out
+    await handleCheckIn(registrationId);
   };
 
   const handleDelete = async (registrationId: string) => {
@@ -192,6 +192,37 @@ export function TicketManagement() {
     setShowEditModal(false);
     setShowTicketModal(false);
     setSelectedRegistration(null);
+    setShowQRScannerModal(false);
+    setShowScannedTicketModal(false);
+    setScannedRegistration(null);
+  };
+
+  const handleTicketFound = (registration: Registration) => {
+    console.log('Ticket found:', registration);
+    console.log('Registration ID:', registration?.id);
+    console.log('Registration ticketId:', registration?.ticketId);
+    console.log('Registration firstName:', registration?.firstName);
+    
+    if (!registration || !registration.id) {
+      console.error('Invalid registration data received');
+      return;
+    }
+    
+    // Set the scanned registration first
+    setScannedRegistration(registration);
+    console.log('Scanned registration set');
+    
+    // Open the scanned ticket modal
+    setShowScannedTicketModal(true);
+    console.log('Scanned ticket modal opened');
+    
+    // Close the QR scanner modal
+    setShowQRScannerModal(false);
+    console.log('QR scanner modal closed');
+  };
+
+  const openQRScanner = () => {
+    setShowQRScannerModal(true);
   };
 
   const handleRegistrationUpdated = () => {
@@ -218,12 +249,23 @@ export function TicketManagement() {
             Manage all NFT registrations and check-ins
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Add Registration
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={openQRScanner}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1V6a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1zM5 20h2a1 1 0 001-1v-1a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1v-1a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1z" />
+            </svg>
+            <span>QR Scanner</span>
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Add Registration
+          </button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -460,6 +502,39 @@ export function TicketManagement() {
             openEditModal(selectedRegistration);
           }}
         />
+      )}
+
+      {/* QR Scanner Modal */}
+      {showQRScannerModal && (
+        <QRScannerModal
+          isOpen={showQRScannerModal}
+          onClose={() => setShowQRScannerModal(false)}
+          onTicketFound={handleTicketFound}
+        />
+      )}
+
+      {/* Scanned Ticket Modal */}
+      {showScannedTicketModal && scannedRegistration && (
+        <ScannedTicketModal
+          isOpen={showScannedTicketModal}
+          onClose={() => setShowScannedTicketModal(false)}
+          registration={scannedRegistration}
+          onCheckIn={handleCheckIn}
+          onEdit={openEditModal}
+          onScanNext={() => {
+            setShowScannedTicketModal(false);
+            setShowQRScannerModal(true);
+          }}
+        />
+      )}
+      
+      {/* Debug info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 right-4 bg-black bg-opacity-75 text-white p-2 text-xs rounded">
+          QR: {showQRScannerModal ? 'ON' : 'OFF'} | 
+          Ticket: {showScannedTicketModal ? 'ON' : 'OFF'} | 
+          Has Reg: {scannedRegistration ? 'YES' : 'NO'}
+        </div>
       )}
     </div>
   );

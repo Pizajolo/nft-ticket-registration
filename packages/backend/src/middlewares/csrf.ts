@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { env } from '../env';
 import { ValidationError } from './errors';
 
-export const csrfProtection = (req: Request, res: Response, next: NextFunction) => {
+export const csrfProtection = (req: Request, _res: Response, next: NextFunction) => {
   // Skip CSRF check for GET, HEAD, OPTIONS requests
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     return next();
@@ -34,7 +34,7 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
 };
 
 // Middleware to set CSRF token cookie
-export const setCsrfToken = (req: Request, res: Response, next: NextFunction) => {
+export const setCsrfToken = (_req: Request, res: Response, next: NextFunction) => {
   // Generate a new CSRF token
   const token = generateCsrfToken();
   
@@ -48,7 +48,7 @@ export const setCsrfToken = (req: Request, res: Response, next: NextFunction) =>
   });
 
   // Add token to response for immediate use
-  res.locals.csrfToken = token;
+  (res.locals as any)['csrfToken'] = token;
   
   next();
 };

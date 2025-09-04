@@ -438,7 +438,7 @@ router.delete('/registrations/:id', requireAdminAuth, async (req: Request, res: 
 });
 
 // Export registrations as CSV (admin only)
-router.get('/export.csv', requireAdminAuth, async (req: Request, res: Response) => {
+router.get('/export.csv', requireAdminAuth, async (_req: Request, res: Response) => {
   try {
     const db = getDatabase();
     
@@ -491,7 +491,7 @@ router.get('/export.csv', requireAdminAuth, async (req: Request, res: Response) 
 });
 
 // Get admin dashboard statistics
-router.get('/stats', requireAdminAuth, async (req: Request, res: Response) => {
+router.get('/stats', requireAdminAuth, async (_req: Request, res: Response) => {
   try {
     const db = getDatabase();
     
@@ -540,7 +540,7 @@ router.get('/activities', requireAdminAuth, async (req: Request, res: Response) 
 });
 
 // Get available contracts for admin registration
-router.get('/contracts', requireAdminAuth, async (req: Request, res: Response) => {
+router.get('/contracts', requireAdminAuth, async (_req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const { getTNT721Contracts } = await import('../env');
@@ -623,6 +623,137 @@ router.post('/wallet-nfts', requireAdminAuth, async (req: Request, res: Response
     if (error instanceof z.ZodError) {
       throw new ValidationError('Invalid request data');
     }
+    throw error;
+  }
+});
+
+// Get registration by ticket ID for QR scanner
+router.get('/registrations/by-ticket/:ticketId', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { ticketId } = req.params;
+    
+    if (!ticketId) {
+      throw new ValidationError('Ticket ID required');
+    }
+    
+    const db = getDatabase();
+    const registration = db.registrations.find(reg => reg.ticketId === ticketId);
+    
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Registration not found'
+      });
+    }
+    
+    // Get contract info for display
+    const contractInfo = await ContractService.getContractInfo(registration.nft.contract);
+    
+    // Check current NFT ownership
+    const { getTNT721Contracts } = await import('../env');
+    const contracts = getTNT721Contracts();
+    
+    if (!contracts.includes(registration.nft.contract)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Contract not supported'
+      });
+    }
+    
+    const rpcUrl = process.env['RPC_URL'] || 'https://eth-rpc-api.thetatoken.org/rpc';
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    
+    const ERC721_ABI = [
+      'function balanceOf(address owner) view returns (uint256)',
+      'function ownerOf(uint256 tokenId) view returns (address)'
+    ];
+    
+    let currentOwner = null;
+    let isStillOwned = false;
+    
+    try {
+      const contract = new ethers.Contract(registration.nft.contract, ERC721_ABI, provider);
+      currentOwner = await (contract as any)['ownerOf'](registration.nft.tokenId);
+      isStillOwned = currentOwner.toLowerCase() === registration.wallet.toLowerCase();
+    } catch (error) {
+      console.error('Failed to check NFT ownership:', error);
+    }
+    
+    // Detect differences between QR code and backend data
+    const differences = [];
+    
+    if (!isStillOwned) {
+      differences.push({
+        type: 'wallet_change',
+        field: 'wallet',
+        oldValue: registration.wallet,
+        newValue: currentOwner || 'Unknown',
+        message: 'NFT is no longer owned by the registered wallet'
+      });
+    }
+    
+    // Enhance registration with contract name and verification data
+    const enhancedRegistration = {
+      ...registration,
+      nft: {
+        ...registration.nft,
+        contractName: contractInfo.name
+      },
+      verification: {
+        isStillOwned,
+        currentOwner: currentOwner || 'Unknown',
+        differences
+      }
+    };
+    
+    return res.json({
+      success: true,
+      data: { 
+        registration: enhancedRegistration 
+      }
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new ValidationError('Invalid request data');
+    }
+    throw error;
+  }
+});
+
+// Regenerate QR codes for existing registrations (admin only)
+router.post('/registrations/regenerate-qr', requireAdminAuth, async (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    let updatedCount = 0;
+    
+    for (const registration of db.registrations) {
+      if (registration.ticketId) {
+        // Regenerate QR code payload to match the ticketId
+        registration.qr = {
+          payload: JSON.stringify({
+            t: 'eucon',
+            v: 1,
+            ticketId: registration.ticketId,
+            nft: {
+              contract: registration.nft.contract,
+              tokenId: registration.nft.tokenId
+            }
+          })
+        };
+        updatedCount++;
+      }
+    }
+    
+    await saveDatabase();
+    
+    res.json({
+      success: true,
+      data: {
+        message: `Regenerated QR codes for ${updatedCount} registrations`,
+        updatedCount
+      }
+    });
+  } catch (error) {
     throw error;
   }
 });

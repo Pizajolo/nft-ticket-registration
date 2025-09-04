@@ -52,6 +52,19 @@ router.post('/submit', requireUserAuth, async (req: Request, res: Response) => {
         existingRegistration.method = item.method;
         existingRegistration.verifiedAt = new Date().toISOString();
         
+        // Update QR code payload to match the existing ticketId
+        existingRegistration.qr = {
+          payload: JSON.stringify({
+            t: 'eucon',
+            v: 1,
+            ticketId: existingRegistration.ticketId,
+            nft: {
+              contract: existingRegistration.nft.contract,
+              tokenId: existingRegistration.nft.tokenId
+            }
+          })
+        };
+        
         results.push({
           id: existingRegistration.id,
           ticketId: existingRegistration.ticketId || '',
@@ -64,6 +77,7 @@ router.post('/submit', requireUserAuth, async (req: Request, res: Response) => {
         });
       } else {
         // Create new registration
+        const ticketId = uuidv4();
         const newRegistration: RegistrationRecord = {
           id: uuidv4(),
           wallet: sessionWallet,
@@ -76,12 +90,12 @@ router.post('/submit', requireUserAuth, async (req: Request, res: Response) => {
           email: item.email,
           method: item.method,
           verifiedAt: new Date().toISOString(),
-          ticketId: uuidv4(),
+          ticketId: ticketId,
           qr: {
             payload: JSON.stringify({
               t: 'eucon',
               v: 1,
-              ticketId: uuidv4(),
+              ticketId: ticketId,
               nft: {
                 contract: item.nft.contract as `0x${string}`,
                 tokenId: item.nft.tokenId

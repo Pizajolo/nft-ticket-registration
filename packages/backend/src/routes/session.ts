@@ -29,7 +29,7 @@ const challengeVerifySchema = z.object({
 });
 
 // CSRF token endpoint
-router.get('/csrf', setCsrfToken, (req: Request, res: Response) => {
+router.get('/csrf', setCsrfToken, (_req: Request, res: Response) => {
   res.json({
     success: true,
     data: { token: res.locals['csrfToken'] }
