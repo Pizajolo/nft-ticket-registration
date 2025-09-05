@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { NFT } from '@/types/nft';
 
 interface Registration {
   id: string;
   wallet: string;
-  nft: {
-    contract: string;
-    tokenId: string;
-  };
+  nft: NFT;
   firstName: string;
   lastName: string;
   email: string;
