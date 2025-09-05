@@ -5,7 +5,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-type NFT = { contract: string; tokenId: string; name?: string };
+type NFT = { 
+  contract: string; 
+  tokenId: string; 
+  name?: string;
+  existing?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+};
 
 type FormData = {
   firstName: string;

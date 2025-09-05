@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
   async rewrites() {
     // Only use localhost rewrite in development
     if (process.env.NODE_ENV === 'development') {
