@@ -2,7 +2,7 @@ import { getDatabase, saveDatabase } from '../db/init';
 
 export interface AdminActivity {
   id: string;
-  type: 'registration_created' | 'registration_updated' | 'registration_deleted' | 'checkin' | 'checkout' | 'admin_login' | 'admin_logout';
+  type: 'registration_created' | 'registration_updated' | 'registration_deleted' | 'checkin' | 'checkout' | 'admin_login' | 'admin_logout' | 'admin_settings_updated';
   description: string;
   details: {
     adminWallet: string;
@@ -201,6 +201,23 @@ export class ActivityService {
       description: 'Admin logged out',
       details: {
         adminWallet
+      }
+    });
+  }
+
+  static async logAdminSettingsUpdated(adminWallet: string, changes: Record<string, any>): Promise<void> {
+    const changeDescriptions = Object.keys(changes).map(key => {
+      if (key === 'password') return 'password';
+      if (key === 'email') return 'email address';
+      return key;
+    });
+    
+    await this.logActivity({
+      type: 'admin_settings_updated',
+      description: `Admin settings updated: ${changeDescriptions.join(', ')}`,
+      details: {
+        adminWallet,
+        changes
       }
     });
   }

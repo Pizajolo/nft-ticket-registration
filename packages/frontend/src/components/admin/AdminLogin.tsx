@@ -72,7 +72,7 @@ export function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
 
       // Step 2: Request signature from user
       if (window.ethereum) {
-        const provider = new ethers.BrowserProvider(window.ethereum);
+        const provider = new ethers.BrowserProvider(window.ethereum as any);
         const signer = await provider.getSigner();
         const signatureResult = await signer.signMessage(nonceData.data.message);
         setSignature(signatureResult);
@@ -164,7 +164,7 @@ export function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  placeholder="admin@eucon.com"
+                  placeholder="Enter Email..."
                 />
               </div>
               <div>

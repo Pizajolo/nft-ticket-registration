@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { ethers } from 'ethers';
 import bcrypt from 'bcryptjs';
@@ -51,8 +51,14 @@ const registrationSchema = z.object({
   })).min(1, 'At least one registration required').max(10, 'Maximum 10 registrations per request')
 });
 
+const adminUpdateSchema = z.object({
+  email: z.string().email('Invalid email address').max(255, 'Email too long').optional(),
+  currentPassword: z.string().min(1, 'Current password required'),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters').max(100, 'Password too long').optional()
+});
+
 // Admin login with password
-router.post('/login/password', authRateLimiter, async (req: Request, res: Response) => {
+router.post('/login/password', authRateLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password } = adminPasswordSchema.parse(req.body);
     
@@ -60,18 +66,33 @@ router.post('/login/password', authRateLimiter, async (req: Request, res: Respon
     const admin = db.admins.find(a => a.email === email);
     
     if (!admin || !admin.passwordHash) {
-      throw new AuthenticationError('Invalid credentials');
+      res.status(401).json({
+        success: false,
+        error: 'AuthenticationError',
+        message: 'Invalid credentials'
+      });
+      return;
     }
     
     // Verify password
     const isValidPassword = await bcrypt.compare(password, admin.passwordHash);
     if (!isValidPassword) {
-      throw new AuthenticationError('Invalid credentials');
+      res.status(401).json({
+        success: false,
+        error: 'AuthenticationError',
+        message: 'Invalid credentials'
+      });
+      return;
     }
     
     // Issue admin session JWT
     if (!admin.wallet) {
-      throw new AuthenticationError('Admin wallet not configured');
+      res.status(401).json({
+        success: false,
+        error: 'AuthenticationError',
+        message: 'Admin wallet not configured'
+      });
+      return;
     }
     const { jwt, session } = sessionService.issueAdminSessionJWT(admin.wallet);
     
@@ -93,20 +114,30 @@ router.post('/login/password', authRateLimiter, async (req: Request, res: Respon
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw new ValidationError('Invalid request data');
+      res.status(400).json({
+        success: false,
+        error: 'ValidationError',
+        message: 'Invalid request data'
+      });
+      return;
     }
-    throw error;
+    next(error);
   }
 });
 
 // Admin login with wallet (get nonce)
-router.post('/login/wallet/nonce', authRateLimiter, async (req: Request, res: Response) => {
+router.post('/login/wallet/nonce', authRateLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { wallet } = adminWalletSchema.parse(req.body);
     
     // Check if wallet is authorized admin
     if (wallet.toLowerCase() !== env.ADMIN_WALLET.toLowerCase()) {
-      throw new AuthenticationError('Unauthorized wallet');
+      res.status(401).json({
+        success: false,
+        error: 'AuthenticationError',
+        message: 'Unauthorized wallet'
+      });
+      return;
     }
     
     const nonce = `admin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -124,26 +155,41 @@ router.post('/login/wallet/nonce', authRateLimiter, async (req: Request, res: Re
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw new ValidationError('Invalid request data');
+      res.status(400).json({
+        success: false,
+        error: 'ValidationError',
+        message: 'Invalid request data'
+      });
+      return;
     }
-    throw error;
+    next(error);
   }
 });
 
 // Admin login with wallet (verify signature)
-router.post('/login/wallet/siwe', authRateLimiter, async (req: Request, res: Response) => {
+router.post('/login/wallet/siwe', authRateLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { wallet, signature, message } = adminWalletSiweSchema.parse(req.body);
     
     // Check if wallet is authorized admin
     if (wallet.toLowerCase() !== env.ADMIN_WALLET.toLowerCase()) {
-      throw new AuthenticationError('Unauthorized wallet');
+      res.status(401).json({
+        success: false,
+        error: 'AuthenticationError',
+        message: 'Unauthorized wallet'
+      });
+      return;
     }
     
     // Verify signature
     const recoveredAddress = ethers.verifyMessage(message, signature);
     if (recoveredAddress.toLowerCase() !== wallet.toLowerCase()) {
-      throw new AuthenticationError('Invalid signature');
+      res.status(401).json({
+        success: false,
+        error: 'AuthenticationError',
+        message: 'Invalid signature'
+      });
+      return;
     }
     
     // Issue admin session JWT
@@ -167,9 +213,14 @@ router.post('/login/wallet/siwe', authRateLimiter, async (req: Request, res: Res
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw new ValidationError('Invalid request data');
+      res.status(400).json({
+        success: false,
+        error: 'ValidationError',
+        message: 'Invalid request data'
+      });
+      return;
     }
-    throw error;
+    next(error);
   }
 });
 
@@ -751,6 +802,110 @@ router.post('/registrations/regenerate-qr', requireAdminAuth, async (_req: Reque
       data: {
         message: `Regenerated QR codes for ${updatedCount} registrations`,
         updatedCount
+      }
+    });
+  } catch (error) {
+    throw error;
+  }
+});
+
+// Update admin credentials (admin only)
+router.patch('/settings', requireAdminAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email, currentPassword, newPassword } = adminUpdateSchema.parse(req.body);
+    
+    const db = getDatabase();
+    const admin = db.admins.find(a => a.wallet === req.user!.wallet);
+    
+    if (!admin || !admin.passwordHash) {
+      res.status(401).json({
+        success: false,
+        error: 'AuthenticationError',
+        message: 'Admin not found'
+      });
+      return;
+    }
+    
+    // Verify current password
+    const isValidPassword = await bcrypt.compare(currentPassword, admin.passwordHash);
+    if (!isValidPassword) {
+      res.status(401).json({
+        success: false,
+        error: 'AuthenticationError',
+        message: 'Current password is incorrect'
+      });
+      return;
+    }
+    
+    // Store original values for activity logging
+    const originalEmail = admin.email;
+    
+    // Update email if provided
+    if (email && email !== admin.email) {
+      admin.email = email;
+    }
+    
+    // Update password if provided
+    if (newPassword) {
+      const saltRounds = 12;
+      admin.passwordHash = await bcrypt.hash(newPassword, saltRounds);
+    }
+    
+    // Save to database
+    await saveDatabase();
+    
+    // Log activity
+    const changes: Record<string, any> = {};
+    if (email && email !== originalEmail) {
+      changes['email'] = { from: originalEmail, to: email };
+    }
+    if (newPassword) {
+      changes['password'] = { from: '[HIDDEN]', to: '[UPDATED]' };
+    }
+    
+    if (Object.keys(changes).length > 0) {
+      await ActivityService.logAdminSettingsUpdated(req.user!.wallet, changes);
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        message: 'Admin settings updated successfully',
+        updated: {
+          email: email ? true : false,
+          password: newPassword ? true : false
+        }
+      }
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        error: 'ValidationError',
+        message: 'Invalid request data'
+      });
+      return;
+    }
+    next(error);
+  }
+});
+
+// Get admin settings (admin only)
+router.get('/settings', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const admin = db.admins.find(a => a.wallet === req.user!.wallet);
+    
+    if (!admin) {
+      throw new AuthenticationError('Admin not found');
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        email: admin.email,
+        wallet: admin.wallet,
+        hasPassword: !!admin.passwordHash
       }
     });
   } catch (error) {

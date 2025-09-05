@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from 'react';
+import { toPng } from "html-to-image";
+import QRCode from "qrcode";
 
 interface Registration {
   id: string;
@@ -8,6 +10,7 @@ interface Registration {
   nft: {
     contract: string;
     tokenId: string;
+    contractName?: string;
   };
   firstName: string;
   lastName: string;
@@ -29,6 +32,8 @@ interface TicketDetailsModalProps {
 export function TicketDetailsModal({ registration, onClose, onCheckIn, onEdit }: TicketDetailsModalProps) {
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
 
   const handleCheckIn = async () => {
     setIsCheckingIn(true);
@@ -40,6 +45,146 @@ export function TicketDetailsModal({ registration, onClose, onCheckIn, onEdit }:
       setError('Check-in failed. Please try again.');
     } finally {
       setIsCheckingIn(false);
+    }
+  };
+
+  const generateQRCode = async () => {
+    if (qrDataUrl) return; // Already generated
+    
+    setIsGeneratingQR(true);
+    try {
+      // Use the exact QR payload format from the database
+      // The payload should be the raw JSON string, not a JSON.stringify of an object
+      const qrPayload = `{"t":"eucon","v":1,"ticketId":"${registration.ticketId}","nft":{"contract":"${registration.nft.contract}","tokenId":"${registration.nft.tokenId}"}}`;
+
+      const dataUrl = await QRCode.toDataURL(qrPayload, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      setQrDataUrl(dataUrl);
+    } catch (error) {
+      console.error('Failed to generate QR code:', error);
+      setError('Failed to generate QR code');
+    } finally {
+      setIsGeneratingQR(false);
+    }
+  };
+
+  const downloadTicketPNG = async () => {
+    if (!qrDataUrl) {
+      await generateQRCode();
+      return;
+    }
+
+    try {
+      // Create a temporary ticket card element with proper React structure
+      const ticketElement = document.createElement('div');
+      ticketElement.className = 'rounded-2xl shadow-lg p-6 w-80 border border-gray-200 relative overflow-hidden';
+      ticketElement.style.backgroundImage = 'url(/images/ticket-background.png)';
+      ticketElement.style.backgroundSize = 'cover';
+      ticketElement.style.backgroundPosition = 'center';
+      ticketElement.style.backgroundRepeat = 'no-repeat';
+
+      // Create the overlay
+      const overlay = document.createElement('div');
+      overlay.className = 'absolute inset-0 bg-black bg-opacity-10 z-0 pointer-events-none';
+      ticketElement.appendChild(overlay);
+
+      // Create the content container
+      const content = document.createElement('div');
+      content.className = 'relative z-10';
+      ticketElement.appendChild(content);
+
+      // Create header section
+      const header = document.createElement('div');
+      header.className = 'text-center mb-4';
+      
+      const titleContainer = document.createElement('div');
+      titleContainer.className = 'mb-1';
+      
+      const title = document.createElement('h3');
+      title.className = 'text-lg font-bold text-black bg-white bg-opacity-100 rounded-lg px-3 py-1 inline-block shadow';
+      title.textContent = 'THETA EuroCon';
+      titleContainer.appendChild(title);
+      header.appendChild(titleContainer);
+
+      const subtitleContainer = document.createElement('div');
+      const subtitle = document.createElement('span');
+      subtitle.className = 'text-sm text-gray-600 bg-white bg-opacity-100 rounded-lg px-3 py-1 inline-block shadow';
+      subtitle.textContent = 'NFT Ticket';
+      subtitleContainer.appendChild(subtitle);
+      header.appendChild(subtitleContainer);
+
+      content.appendChild(header);
+
+      // Create QR code
+      const qrImg = document.createElement('img');
+      qrImg.src = qrDataUrl;
+      qrImg.alt = 'QR Code';
+      qrImg.className = 'w-48 h-48 mx-auto rounded-lg';
+      content.appendChild(qrImg);
+
+      // Create name section
+      const nameSection = document.createElement('div');
+      nameSection.className = 'mt-4 text-center';
+      
+      const nameContainer = document.createElement('div');
+      nameContainer.className = 'flex flex-col items-center';
+      
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'font-semibold text-lg text-black bg-white bg-opacity-100 rounded-lg px-3 py-1 inline-block shadow min-h-[2.5rem] flex items-center justify-center';
+      nameDiv.textContent = `${registration.firstName} ${registration.lastName}`;
+      nameContainer.appendChild(nameDiv);
+      
+      const tokenDiv = document.createElement('div');
+      tokenDiv.className = 'text-sm text-gray-600 mt-1 bg-white bg-opacity-100 rounded-lg px-3 py-1 inline-block shadow min-h-[1.75rem] flex items-center justify-center';
+      tokenDiv.textContent = `Token #${registration.nft.tokenId}`;
+      nameContainer.appendChild(tokenDiv);
+      
+      nameSection.appendChild(nameContainer);
+      content.appendChild(nameSection);
+
+      // Create footer
+      const footer = document.createElement('div');
+      footer.className = 'mt-4 text-center';
+      
+      const footerText = document.createElement('div');
+      footerText.className = 'text-xs text-blue-100';
+      footerText.textContent = 'Scan QR code for verification';
+      footer.appendChild(footerText);
+      content.appendChild(footer);
+
+      // Create Download PNG button (same as original)
+      const downloadButton = document.createElement('button');
+      downloadButton.className = 'mt-4 w-full rounded-xl border-2 border-white py-2 text-white hover:bg-white hover:text-blue-900 transition-colors font-medium';
+      downloadButton.textContent = 'Download PNG';
+      content.appendChild(downloadButton);
+
+      // Append to body temporarily
+      document.body.appendChild(ticketElement);
+
+      // Generate PNG with transparent background to preserve rounded corners
+      const dataUrl = await toPng(ticketElement, { 
+        cacheBust: true, 
+        pixelRatio: 2,
+        backgroundColor: undefined // Transparent background
+      });
+
+      // Download
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `ticket_${registration.nft.tokenId}_${registration.firstName}_${registration.lastName}.png`;
+      a.click();
+
+      // Clean up
+      document.body.removeChild(ticketElement);
+    } catch (error) {
+      console.error('Failed to generate ticket image:', error);
+      setError('Failed to generate ticket image');
     }
   };
 
@@ -130,6 +275,14 @@ export function TicketDetailsModal({ registration, onClose, onCheckIn, onEdit }:
 
           {/* Action Buttons */}
           <div className="flex justify-end space-x-3 pt-6">
+            <button
+              onClick={downloadTicketPNG}
+              disabled={isGeneratingQR}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGeneratingQR ? 'Generating...' : 'Download PNG'}
+            </button>
+            
             <button
               onClick={onEdit}
               className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"

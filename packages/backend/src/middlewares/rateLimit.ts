@@ -74,6 +74,39 @@ export const authRateLimiter = (req: Request, res: Response, next: NextFunction)
   next();
 };
 
+// Admin rate limiter - much more lenient for admin operations
+export const adminRateLimiter = (req: Request, res: Response, next: NextFunction) => {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const now = Date.now();
+  
+  // Very generous limits for admin operations
+  const ADMIN_WINDOW_MS = 1 * 60 * 1000; // 15 minutes
+  const MAX_ADMIN_REQUESTS = 500; // Max requests per window (much higher)
+  
+  const current = requestCounts.get(`admin:${ip}`);
+  
+  if (!current || now > current.resetTime) {
+    requestCounts.set(`admin:${ip}`, { count: 1, resetTime: now + ADMIN_WINDOW_MS });
+    return next();
+  }
+  
+  if (current.count >= MAX_ADMIN_REQUESTS) {
+    const resetTime = new Date(current.resetTime).toISOString();
+    res.set('X-RateLimit-Limit', MAX_ADMIN_REQUESTS.toString());
+    res.set('X-RateLimit-Remaining', '0');
+    res.set('X-RateLimit-Reset', resetTime);
+    
+    throw new RateLimitError(`Admin rate limit exceeded. Try again after ${resetTime}`);
+  }
+  
+  current.count++;
+  res.set('X-RateLimit-Limit', MAX_ADMIN_REQUESTS.toString());
+  res.set('X-RateLimit-Remaining', (MAX_ADMIN_REQUESTS - current.count).toString());
+  res.set('X-RateLimit-Reset', new Date(current.resetTime).toISOString());
+  
+  next();
+};
+
 // Clean up expired entries periodically
 setInterval(() => {
   const now = Date.now();

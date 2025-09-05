@@ -36,7 +36,11 @@ interface Registration {
   };
 }
 
-export function TicketManagement() {
+interface TicketManagementProps {
+  autoOpenScanner?: boolean;
+}
+
+export function TicketManagement({ autoOpenScanner = false }: TicketManagementProps) {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [filteredRegistrations, setFilteredRegistrations] = useState<Registration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,6 +73,16 @@ export function TicketManagement() {
   useEffect(() => {
     applyFilters();
   }, [searchTerm, statusFilter, registrations]);
+
+  useEffect(() => {
+    if (autoOpenScanner && !isLoading) {
+      setShowQRScannerModal(true);
+      // Remove the scanner parameter from URL after opening
+      const url = new URL(window.location.href);
+      url.searchParams.delete('scanner');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [autoOpenScanner, isLoading]);
 
   const fetchRegistrations = async () => {
     try {

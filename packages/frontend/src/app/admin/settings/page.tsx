@@ -1,16 +1,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { TicketManagement } from '@/components/admin/TicketManagement';
+import { AdminSettings } from '@/components/admin/AdminSettings';
 
-export default function AdminTicketsPage() {
+export default function AdminSettingsPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const shouldOpenScanner = searchParams.get('scanner') === 'true';
 
   useEffect(() => {
     checkAdminAuth();
@@ -18,7 +16,7 @@ export default function AdminTicketsPage() {
 
   const checkAdminAuth = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/registrations`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/settings`, {
         credentials: 'include',
       });
       
@@ -41,7 +39,7 @@ export default function AdminTicketsPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading tickets management...</p>
+          <p className="text-gray-600">Loading settings...</p>
         </div>
       </div>
     );
@@ -66,7 +64,7 @@ export default function AdminTicketsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </Link>
-              <h1 className="text-2xl font-bold text-gray-900">Ticket Management</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Admin Settings</h1>
             </div>
             <div className="flex items-center space-x-4">
               <Link
@@ -81,9 +79,9 @@ export default function AdminTicketsPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <TicketManagement autoOpenScanner={shouldOpenScanner} />
+          <AdminSettings />
         </div>
       </main>
     </div>

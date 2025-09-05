@@ -176,7 +176,7 @@ export function AdminDashboard({ stats }: AdminDashboardProps) {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         {/* Registration Management */}
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="p-5">
@@ -238,10 +238,46 @@ export function AdminDashboard({ stats }: AdminDashboardProps) {
           <div className="bg-gray-50 px-5 py-3">
             <div className="text-sm">
               <Link
-                href="/admin/scanner"
+                href="/admin/tickets?scanner=true"
                 className="font-medium text-blue-700 hover:text-blue-900"
               >
                 Open scanner →
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Admin Settings */}
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-gray-500 rounded-md flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Admin Settings
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900">
+                    Update credentials & preferences
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+          <div className="bg-gray-50 px-5 py-3">
+            <div className="text-sm">
+              <Link
+                href="/admin/settings"
+                className="font-medium text-blue-700 hover:text-blue-900"
+              >
+                Open settings →
               </Link>
             </div>
           </div>

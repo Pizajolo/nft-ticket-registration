@@ -3,7 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { env, getCorsOrigins } from './env';
 import { errorHandler } from './middlewares/errors';
-import { rateLimiter } from './middlewares/rateLimit';
+import { rateLimiter, adminRateLimiter } from './middlewares/rateLimit';
 // import { csrfProtection } from './middlewares/csrf';
 
 // Import routes
@@ -52,7 +52,7 @@ app.use('/api/session', sessionRoutes);
 app.use('/api/nfts', nftRoutes);
 app.use('/api/registration', registrationRoutes);
 app.use('/api/tickets', ticketRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin', adminRateLimiter, adminRoutes); // Use admin rate limiter for admin routes
 app.use('/api/checkin', checkinRoutes);
 
 // 404 handler
