@@ -48,6 +48,7 @@ export function AddRegistrationModal({ onClose, onSuccess }: AddRegistrationModa
             firstName: formData.firstName,
             lastName: formData.lastName,
             email: formData.email,
+            wallet: formData.wallet,
             method: 'admin',
           }],
         }),
