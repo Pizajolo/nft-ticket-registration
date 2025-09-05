@@ -52,6 +52,9 @@ export default function Home() {
               </Link>
             </div>
           </div>
+          <p className="text-gray-500 text-sm pt-4">
+            If you can&apos;t register your NFT, please contact us at <a href="mailto:contract@theta-euro.com" className="text-blue-600 hover:text-blue-700">contract@theta-euro.com</a>.
+          </p>
         </div>
       </div>
 
@@ -113,7 +116,15 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
               <p className="text-gray-900 text-sm">
-                © 2025 THETA EuroCon. All rights reserved.
+                © 2025 THETA EuroCon. All rights reserved. &nbsp;|&nbsp;
+                <a
+                  href="https://github.com/theta-euro/nft-ticket-registration"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  View on GitHub
+                </a>
               </p>
             </div>
             <div className="flex space-x-6 mt-4 md:mt-0">
