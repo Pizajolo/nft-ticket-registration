@@ -19,6 +19,7 @@ declare global {
 /**
  * Middleware to require authentication
  * Sets req.user with wallet and session type
+ * Automatically cleans up expired sessions during validation
  */
 export const requireAuth = (req: Request, _res: Response, next: NextFunction) => {
   try {
@@ -31,7 +32,7 @@ export const requireAuth = (req: Request, _res: Response, next: NextFunction) =>
     // Verify JWT token
     const payload = sessionService.verifyJWT(token);
     
-    // Check if session is still valid in database
+    // Check if session is still valid in database (this also cleans up expired sessions)
     if (!sessionService.isSessionValid(payload.jti)) {
       throw new AuthenticationError('Session expired or invalid');
     }
@@ -48,6 +49,7 @@ export const requireAuth = (req: Request, _res: Response, next: NextFunction) =>
     if (error instanceof AuthenticationError) {
       next(error);
     } else {
+      // If JWT verification fails, the session is definitely invalid
       next(new AuthenticationError('Invalid session'));
     }
   }
@@ -85,6 +87,7 @@ export const requireAdminAuth = (req: Request, res: Response, next: NextFunction
 
 /**
  * Middleware to optionally authenticate (sets req.user if valid token exists)
+ * Automatically cleans up expired sessions during validation
  */
 export const optionalAuth = (req: Request, _res: Response, next: NextFunction) => {
   try {
@@ -97,7 +100,7 @@ export const optionalAuth = (req: Request, _res: Response, next: NextFunction) =
     // Verify JWT token
     const payload = sessionService.verifyJWT(token);
     
-    // Check if session is still valid in database
+    // Check if session is still valid in database (this also cleans up expired sessions)
     if (!sessionService.isSessionValid(payload.jti)) {
       return next(); // Invalid token, continue without user
     }

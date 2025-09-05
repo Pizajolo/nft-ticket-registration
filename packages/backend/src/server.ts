@@ -4,7 +4,6 @@ import cookieParser from 'cookie-parser';
 import { env, getCorsOrigins } from './env';
 import { errorHandler } from './middlewares/errors';
 import { rateLimiter, adminRateLimiter } from './middlewares/rateLimit';
-// import { csrfProtection } from './middlewares/csrf';
 
 // Import routes
 import sessionRoutes from './routes/session';

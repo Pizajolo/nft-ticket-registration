@@ -59,7 +59,7 @@
 - [x] Ticket display and QR generation
 - [x] Admin portal interface
 - [x] Privacy policy and terms of service pages
-- [ ] QR scanner integration
+- [x] QR scanner integration
 
 ### 6. Blockchain Integration (T5)
 - [x] Actual NFT ownership verification
@@ -67,10 +67,10 @@
 ## 📋 Next Steps (T14-T15)
 
 ### 7. Hardening & Testing
-- [ ] Rate limiting improvements
+- [x] Rate limiting improvements
 - [ ] Input validation enhancements
 - [ ] Error handling improvements
-- [ ] Logging system
+- [x] Logging system (for admin)
 - [ ] Unit tests
 - [ ] Integration tests
 - [ ] E2E tests with Playwright

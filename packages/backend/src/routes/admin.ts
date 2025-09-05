@@ -913,4 +913,61 @@ router.get('/settings', requireAdminAuth, async (req: Request, res: Response) =>
   }
 });
 
+// Get session statistics (admin only)
+router.get('/sessions/stats', requireAdminAuth, async (_req: Request, res: Response) => {
+  try {
+    const stats = sessionService.getSessionStats();
+    
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    throw error;
+  }
+});
+
+// Clean up expired sessions manually (admin only)
+router.post('/sessions/cleanup', requireAdminAuth, async (_req: Request, res: Response) => {
+  try {
+    const removedCount = sessionService.cleanupExpiredSessions();
+    
+    res.json({
+      success: true,
+      data: {
+        message: `Cleaned up ${removedCount} expired sessions`,
+        removedCount
+      }
+    });
+  } catch (error) {
+    throw error;
+  }
+});
+
+// Force logout all sessions for a specific wallet (admin only)
+router.post('/sessions/invalidate-wallet', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { wallet } = req.body;
+    
+    if (!wallet || !wallet.match(/^0x[a-fA-F0-9]{40}$/)) {
+      throw new ValidationError('Invalid wallet address');
+    }
+    
+    const removedCount = sessionService.invalidateAllSessionsForWallet(wallet as `0x${string}`);
+    
+    res.json({
+      success: true,
+      data: {
+        message: `Invalidated ${removedCount} sessions for wallet ${wallet}`,
+        removedCount
+      }
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new ValidationError('Invalid request data');
+    }
+    throw error;
+  }
+});
+
 export default router;
