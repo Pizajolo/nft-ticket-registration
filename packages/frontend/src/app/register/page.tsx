@@ -4,17 +4,7 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-
-type NFT = { 
-  contract: string; 
-  tokenId: string; 
-  name?: string;
-  existing?: {
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-};
+import { NFT } from '@/types/nft';
 
 type FormData = {
   firstName: string;

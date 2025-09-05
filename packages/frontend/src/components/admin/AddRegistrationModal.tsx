@@ -1,17 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { NFT } from '@/types/nft';
 
 interface Contract {
   address: string;
   name: string;
   symbol?: string;
-}
-
-interface NFT {
-  contract: string;
-  tokenId: string;
-  contractName: string;
 }
 
 interface AddRegistrationModalProps {
