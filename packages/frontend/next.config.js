@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Use static export for Cloudflare Pages
+  output: 'export',
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
   async rewrites() {
     // Only use localhost rewrite in development
     if (process.env.NODE_ENV === 'development') {
