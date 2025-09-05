@@ -53,9 +53,12 @@
     - [x] Magic Link icon (magic-logo.svg) 
     - [x] Wallet Connect icon (wallet-connect-logo.svg)
     - [x] Renamed "Reown Wallet" to "Wallet Connect"
-  - [x] Registration forms
+  - [x] Registration forms with real-time status updates
+  - [x] Registration status display (Ready/Registered/Incomplete)
+  - [x] View Ticket button for registered NFTs
 - [x] Ticket display and QR generation
 - [x] Admin portal interface
+- [x] Privacy policy and terms of service pages
 - [ ] QR scanner integration
 
 ### 6. Blockchain Integration (T5)
@@ -138,7 +141,7 @@ Before testing, you need to:
 ## 📊 Implementation Progress
 
 - **Backend**: 95% complete (all core features implemented)
-- **Frontend**: 40% complete (authentication system implemented)
+- **Frontend**: 60% complete (authentication, registration, and ticket system implemented)
 - **Integration**: 0% complete (needs blockchain verification)
 - **Testing**: 0% complete (needs test suite)
 - **Documentation**: 90% complete (comprehensive guides)

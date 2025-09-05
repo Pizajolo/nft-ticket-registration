@@ -87,7 +87,7 @@ export default function LoginPage() {
                 <div className="w-6 h-6 mr-3 flex items-center justify-center">
                   <img src="/images/magic-logo.png" alt="Magic Link" className="w-6 h-6 rounded-full" />
                 </div>
-                Magic Link (Email) {!isMagicReady && '(Loading...)'}
+                Magic Link (Email) {!isMagicReady && '(Not Available)'}
               </button>
 
               {/* Wallet Connect */}
@@ -183,7 +183,7 @@ export default function LoginPage() {
                             id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                             placeholder="your@email.com"
                             required
                           />

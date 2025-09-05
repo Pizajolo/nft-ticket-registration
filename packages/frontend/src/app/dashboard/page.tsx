@@ -80,8 +80,11 @@ export default function DashboardPage() {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm text-blue-800">
+                  <p className="text-sm text-blue-800">
                       <strong>Next steps:</strong> Check your NFT collection and register for the event.
+                    </p>
+                    <p className="text-sm text-blue-800">
+                      <strong>Important:</strong> You need to register your NFTs before the event to get your tickets. Use the name on your ID to register.
                     </p>
                   </div>
                 </div>

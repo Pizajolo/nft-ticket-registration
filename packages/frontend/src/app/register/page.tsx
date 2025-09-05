@@ -142,6 +142,25 @@ export default function RegisterPage() {
       const j = await r.json();
       if (!r.ok || j?.success !== true) throw new Error(j?.error || 'Failed to submit');
       setSubmitMsg(j?.data?.message || 'Submitted successfully');
+      
+      // Update local NFT state to mark them as registered
+      setNfts(prevNfts => 
+        prevNfts.map(nft => {
+          const k = keyOf(nft);
+          const formState = forms[k];
+          if (formState?.valid) {
+            return {
+              ...nft,
+              existing: {
+                firstName: formState.data.firstName,
+                lastName: formState.data.lastName,
+                email: formState.data.email
+              }
+            };
+          }
+          return nft;
+        })
+      );
     } catch (e: any) {
       setError(e?.message || 'Submission failed');
     } finally {
@@ -211,16 +230,24 @@ export default function RegisterPage() {
                   </div>
                   <div>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${st?.valid ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                      {st?.valid ? 'Ready' : 'Incomplete'}
+                      {st?.valid ? (nft?.existing ? 'Registered' : 'Ready') : 'Incomplete'}
                     </span>
                   </div>
-                  <div>
+                  <div className="flex items-center space-x-2">
                     <button
                       onClick={() => toggleForm(nft)}
                       className="text-blue-600 hover:text-blue-800 text-sm"
                     >
                       {st?.open ? 'Close' : st?.valid ? 'Edit' : 'Fill out'}
                     </button>
+                    {nft?.existing && (
+                      <button
+                        onClick={() => router.push('/tickets')}
+                        className="text-green-600 hover:text-green-800 text-sm font-medium"
+                      >
+                        View Ticket
+                      </button>
+                    )}
                   </div>
                 </div>
 

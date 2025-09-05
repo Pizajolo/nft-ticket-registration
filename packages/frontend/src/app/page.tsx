@@ -19,12 +19,6 @@ export default function Home() {
               >
                 Login
               </Link>
-              <Link 
-                href="/admin"
-                className="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Admin
-              </Link>
             </nav>
           </div>
         </div>
@@ -112,6 +106,33 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-gray-50">
+        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
+              <p className="text-gray-900 text-sm">
+                © 2025 THETA EuroCon. All rights reserved.
+              </p>
+            </div>
+            <div className="flex space-x-6 mt-4 md:mt-0">
+              <Link 
+                href="/privacy"
+                className="text-gray-900 hover:text-blue-600 text-sm transition-colors"
+              >
+                Privacy Policy
+              </Link>
+              <Link 
+                href="/terms"
+                className="text-gray-900 hover:text-blue-600 text-sm transition-colors"
+              >
+                Terms of Service
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

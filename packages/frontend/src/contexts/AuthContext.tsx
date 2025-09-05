@@ -53,8 +53,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const refreshWcState = async (): Promise<void> => {
     try {
       const appkit = getAppKit();
-      if (!appkit) return;
-      const provider = appkit.getWalletProvider?.('eip155') || appkit.getProvider?.('eip155');
+      if (!appkit) {
+        setWcConnected(false);
+        setWcProvider(null);
+        setWcChainId(null);
+        setWcAddress(null);
+        return;
+      }
+      
+      // Try multiple ways to get the provider
+      const provider = appkit.getWalletProvider?.('eip155') || 
+                      appkit.getProvider?.('eip155') ||
+                      appkit.getWalletProvider?.() ||
+                      appkit.getProvider?.();
+                      
       if (!provider) {
         setWcConnected(false);
         setWcProvider(null);
@@ -62,23 +74,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setWcAddress(null);
         return;
       }
+      
       setWcProvider(provider);
+      
+      // Get chain ID
       let chainIdHex: string | undefined;
       try {
         chainIdHex = await provider.request?.({ method: 'eth_chainId' });
-      } catch {}
+      } catch (err) {
+        console.log('Failed to get chain ID:', err);
+      }
+      
       const parsed = chainIdHex ? parseInt(chainIdHex, 16) : null;
       if (parsed !== null) setWcChainId(parsed);
-      const bp = new BrowserProvider(provider as unknown as Eip1193Provider);
-      const signer = await bp.getSigner();
-      const addr = await signer.getAddress();
-      if (addr) {
-        setWcAddress(addr);
-        setWcConnected(true);
-      } else {
+      
+      // Get wallet address
+      try {
+        const bp = new BrowserProvider(provider as unknown as Eip1193Provider);
+        const signer = await bp.getSigner();
+        const addr = await signer.getAddress();
+        if (addr) {
+          setWcAddress(addr.toLowerCase());
+          setWcConnected(true);
+          console.log('Wallet connected:', addr, 'Chain ID:', parsed);
+        } else {
+          setWcConnected(false);
+          setWcAddress(null);
+        }
+      } catch (err) {
+        console.log('Failed to get wallet address:', err);
         setWcConnected(false);
+        setWcAddress(null);
       }
-    } catch {
+    } catch (err) {
+      console.log('Error refreshing WC state:', err);
       setWcConnected(false);
       setWcProvider(null);
       setWcChainId(null);
@@ -88,6 +117,42 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     refreshWcState();
+    
+    // Set up periodic refresh to catch connection changes
+    const interval = setInterval(refreshWcState, 2000);
+    
+    // Also listen for AppKit events if available
+    const appkit = getAppKit();
+    if (appkit) {
+      const handleConnect = () => {
+        console.log('AppKit connected event');
+        setTimeout(refreshWcState, 1000); // Delay to ensure state is updated
+      };
+      
+      const handleDisconnect = () => {
+        console.log('AppKit disconnected event');
+        setWcConnected(false);
+        setWcProvider(null);
+        setWcChainId(null);
+        setWcAddress(null);
+      };
+      
+      // Try to listen for AppKit events
+      if (typeof appkit.subscribe === 'function') {
+        appkit.subscribe('connect', handleConnect);
+        appkit.subscribe('disconnect', handleDisconnect);
+      }
+      
+      return () => {
+        clearInterval(interval);
+        if (typeof appkit.unsubscribe === 'function') {
+          appkit.unsubscribe('connect', handleConnect);
+          appkit.unsubscribe('disconnect', handleDisconnect);
+        }
+      };
+    }
+    
+    return () => clearInterval(interval);
   }, []);
 
   const isWalletConnected = Boolean(wcConnected && wcProvider && wcChainId === 361 && wcAddress);
@@ -95,11 +160,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Initialize Magic SDK on client side only
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const magicKey = process.env.NEXT_PUBLIC_MAGIC_PUBLISHABLE_KEY;
+      
+      // Check if Magic key is properly configured
+      if (!magicKey || magicKey === 'your_magic_publishable_api_key_here' || magicKey.trim() === '') {
+        console.warn('Magic SDK not configured: NEXT_PUBLIC_MAGIC_PUBLISHABLE_KEY is missing or set to placeholder value');
+        setMagic(null);
+        return;
+      }
+      
       try {
-        const magicInstance = new Magic(process.env.NEXT_PUBLIC_MAGIC_PUBLISHABLE_KEY || '');
+        const magicInstance = new Magic(magicKey);
         setMagic(magicInstance);
+        console.log('Magic SDK initialized successfully');
       } catch (error) {
-        console.warn('Magic SDK not configured:', error);
+        console.warn('Magic SDK initialization failed:', error);
+        setMagic(null);
       }
     }
   }, []);
@@ -202,7 +278,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
     
     if (!magic) {
-      setError('Magic SDK not configured. Please set NEXT_PUBLIC_MAGIC_PUBLISHABLE_KEY');
+      setError('Magic Link is not configured. Please contact the administrator or use a different login method.');
       setIsLoading(false);
       return;
     }
@@ -269,12 +345,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
     
     try {
+      // First refresh the connection state to get the latest status
+      await refreshWcState();
+      
       // If not connected yet, open AppKit modal via global instance
       const appkit = (typeof window !== 'undefined' && (window as any).__REOWN_APPKIT__);
-      if (!isWalletConnected) {
+      if (!isWalletConnected || !wcProvider || !wcAddress) {
+        console.log('Opening AppKit modal - not connected or missing provider/address');
         await appkit?.open?.();
+        // Wait a bit for the connection to establish
+        await new Promise(resolve => setTimeout(resolve, 2000));
         await refreshWcState();
-        return;
+        
+        // If still not connected after opening modal, return early
+        if (!isWalletConnected || !wcProvider || !wcAddress) {
+          console.log('Still not connected after opening modal');
+          return;
+        }
       }
 
       // Ensure provider and correct chain (Theta 361)
@@ -361,36 +448,100 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
-      if (user?.type === 'magic' && magic) {
-        await magic.user.logout();
+      console.log('Starting logout process...');
+      
+      // 1. Clear session on backend first (this invalidates the session in database)
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      try {
+        await fetch(`${apiUrl}/api/session/logout`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        console.log('Backend session cleared successfully');
+      } catch (error) {
+        console.warn('Failed to clear backend session:', error);
+        // Continue with logout even if backend call fails
       }
-      // Best-effort disconnect for WalletConnect/AppKit
-      if (user?.type === 'walletconnect') {
+      
+      // 2. Handle provider-specific logout
+      if (user?.type === 'magic' && magic) {
         try {
-          // Prefer AppKit instance disconnect if available
-          const appkit = (typeof window !== 'undefined' && (window as any).__REOWN_APPKIT__);
-          if (appkit && typeof appkit.disconnect === 'function') {
-            await appkit.disconnect();
-          } else if (wcProvider && typeof (wcProvider as any).disconnect === 'function') {
-            await (wcProvider as any).disconnect();
-          } else if (wcProvider && typeof (wcProvider as any).request === 'function') {
-            try { await (wcProvider as any).request({ method: 'wallet_disconnect' }); } catch {}
-          }
-        } catch (e) {
-          console.warn('Wallet disconnect warning:', e);
+          await magic.user.logout();
+          console.log('Magic logout successful');
+        } catch (error) {
+          console.warn('Magic logout warning:', error);
         }
       }
       
-      // Clear session on backend
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-      await fetch(`${apiUrl}/api/session/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      // 3. Handle WalletConnect/AppKit disconnection
+      if (user?.type === 'walletconnect' || isWalletConnected) {
+        try {
+          console.log('Disconnecting WalletConnect...');
+          
+          // Try multiple disconnection methods
+          const appkit = (typeof window !== 'undefined' && (window as any).__REOWN_APPKIT__);
+          
+          if (appkit) {
+            // Method 1: AppKit disconnect
+            if (typeof appkit.disconnect === 'function') {
+              await appkit.disconnect();
+              console.log('AppKit disconnect successful');
+            }
+            // Method 2: AppKit close modal if open
+            if (typeof appkit.close === 'function') {
+              appkit.close();
+            }
+          }
+          
+          // Method 3: Provider disconnect
+          if (wcProvider) {
+            if (typeof (wcProvider as any).disconnect === 'function') {
+              await (wcProvider as any).disconnect();
+              console.log('Provider disconnect successful');
+            } else if (typeof (wcProvider as any).request === 'function') {
+              try {
+                await (wcProvider as any).request({ method: 'wallet_disconnect' });
+                console.log('Wallet disconnect request successful');
+              } catch (err) {
+                console.log('Wallet disconnect request failed:', err);
+              }
+            }
+          }
+          
+          // Method 4: Universal provider disconnect
+          if (typeof window !== 'undefined' && (window as any).__REOWN_UNIVERSAL_PROVIDER__) {
+            try {
+              await (window as any).__REOWN_UNIVERSAL_PROVIDER__.disconnect();
+              console.log('Universal provider disconnect successful');
+            } catch (err) {
+              console.log('Universal provider disconnect failed:', err);
+            }
+          }
+          
+        } catch (error) {
+          console.warn('WalletConnect disconnect warning:', error);
+        }
+      }
       
+      // 4. Clear all local state
       setUser(null);
+      setWcConnected(false);
+      setWcProvider(null);
+      setWcChainId(null);
+      setWcAddress(null);
+      setError(null);
+      
+      console.log('Logout completed successfully');
+      
     } catch (error) {
       console.error('Logout error:', error);
+      // Even if there's an error, clear local state
+      setUser(null);
+      setWcConnected(false);
+      setWcProvider(null);
+      setWcChainId(null);
+      setWcAddress(null);
+      setError(null);
     }
   };
 
